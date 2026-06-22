@@ -1,0 +1,12 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.1.1, pluggy-1.6.0
+rootdir: C:\Users\Ire\Desktop\Codepath AI 110\ai110-module1show-gameglitchinvestigator-starter
+plugins: anyio-4.13.0
+collected 39 items
+
+tests\test_edge_cases.py .............                                   [ 33%]
+tests\test_game_logic.py .......                                         [ 51%]
+tests\test_high_score.py ........                                        [ 71%]
+tests\test_history.py ...........                                        [100%]
+
+============================= 39 passed in 0.37s ==============================
