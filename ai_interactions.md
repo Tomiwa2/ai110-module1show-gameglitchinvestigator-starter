@@ -150,15 +150,29 @@ both report zero issues, and the full 39-test suite still passes (`pytest -q`).
 
 **Task given to both models:**
 
-<!-- Describe what you asked each model to do -->
+I gave both models the same Bug #1 ("reversed hint") task: the game told a
+player to "Go HIGHER" when they guessed too high and "Go LOWER" when they
+guessed too low. I asked each to find and fix the swapped directional hints in
+`check_guess`, and to explain the fix.
 
 | | Model A | Model B |
 |-|---------|---------|
-| **Model name** | | |
-| **Response summary** | | |
-| **More Pythonic?** | | |
-| **Clearer explanation?** | | |
+| **Model name** | Claude (Opus, via Claude Code) | Gemini |
+| **Response summary** | Refactored `check_guess` into `logic_utils.py` and corrected the hints (`Too High` → "📉 Go LOWER", `Too Low` → "📈 Go HIGHER"). Added full docstrings and a defensive `try/except TypeError` fallback that re-runs the comparison as strings so a mistyped secret can't crash the caller. | Returned a minimal `if / elif / else` fix: `guess > secret` → "Go LOWER", `guess < secret` → "Go HIGHER", `else` → "🎉 You got it!". Showed the buggy version inline next to the corrected one. |
+| **More Pythonic?** | Robust and well-documented, but heavier — the `try/except` duplicates the three return branches, which reads as more than the bug strictly required. | **Yes — for this fix.** A clean `if/elif/else` with no duplication; the corrected operators read top-to-bottom and map directly to the hint text. The tighter, more idiomatic answer to the actual bug. |
+| **Clearer explanation?** | Explained the *what* (and embedded the reasoning in a code comment in the source), but stayed terse on the *why*. | **Yes.** Walked through a concrete worked example — secret `50`, guess `30` (`30 < 50`) → the `guess < secret` branch fires → "Go HIGHER!" — which makes the corrected logic obvious. Also showed buggy-vs-fixed side by side. |
 
 **Which did you prefer and why?**
 
-<!-- Your conclusion -->
+For this specific bug, **Gemini (Model B)** gave the better answer: its
+`if/elif/else` was the more Pythonic, readable fix, and its before/after diff
+plus the secret=50 / guess=30 walkthrough explained *why* the swap was wrong
+far more clearly than a code comment does.
+
+I still shipped **Claude's (Model A)** version in the repo, because the task
+wasn't only "fix the hint" — it was also "refactor `check_guess` out of
+`app.py` so it's unit-testable," and Claude did that in the same pass and added
+the `TypeError` fallback that keeps a mistyped secret from raising. So the
+takeaway is split: Gemini wins on readability and teaching the concept, Claude
+wins on doing the surrounding refactor and hardening the function. See the
+shipped result in [`logic_utils.py`](logic_utils.py) (`check_guess`).
