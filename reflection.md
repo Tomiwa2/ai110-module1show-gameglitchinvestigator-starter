@@ -96,6 +96,7 @@ While this would technically make the screen show the number 8, I verified throu
 ## 4. What did you learn about Streamlit and state?
 
 - How would you explain Streamlit "reruns" and session state to a friend who has never used Streamlit?
+   Ans: I'd tell my friend that Streamlit isn't like a normal program that runs once and then waits for you. Instead, every single time you interact with the page; typing in a box, clicking a button, or changing the difficulty dropdown, Streamlit re-runs your entire script from the top all over again. That "rerun" behavior is exactly why our game's secret number kept changing on every guess at first: the line that picked a random number was running fresh on every click, so it never had a chance to stay the same. Session state (st.session_state) is the fix for that, it's like a small backpack that survives the rerun, so anything you store in it (the secret number, the score, the attempt count) is remembered instead of being rebuilt from scratch. The key pattern we used was "only set it if it doesn't already exist" (if "secret" not in st.session_state:), which creates the value once and then lets it persist across all the reruns that follow.
 
 ---
 
@@ -103,5 +104,10 @@ While this would technically make the screen show the number 8, I verified throu
 
 - What is one habit or strategy from this project that you want to reuse in future labs or projects?
   - This could be a testing habit, a prompting strategy, or a way you used Git.
+  Ans: Better and more detailed prompting. It was not only easy on me but on the agent. 
+ 
 - What is one thing you would do differently next time you work with AI on a coding task?
+Letting the agent do the heavy lifting of translating my ideas and just verifying was what I wanted; Doing the heavy lifting was so time consuming and frustrating.
+
 - In one or two sentences, describe how this project changed the way you think about AI generated code.
+Ans: Honestly it has not really changed much, I am still scared and skeptical about creating a whole project with AI and I keep thinking about it messing everything up and me having to restart or me not being able to start over or even follow along anymore or even becoming lazy ^^ but this project changed me wanting to stick to this ideaology and become open to trying till I get to this point and I will cross the bridge but by then the world will not leave me behind at least!
