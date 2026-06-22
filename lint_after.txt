@@ -1,0 +1,5 @@
+$ python -m flake8 logic_utils.py
+(no output — exit code 0, clean)
+
+$ python -m pycodestyle logic_utils.py
+(no output — exit code 0, clean)

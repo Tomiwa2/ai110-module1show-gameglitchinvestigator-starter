@@ -54,12 +54,74 @@ A step-by-step record of a sample game so anyone can follow the fixed behavior e
 
 ## 🧪 Test Results
 
+Phase 2 added an edge-case suite ([`tests/test_edge_cases.py`](tests/test_edge_cases.py)) probing
+three input categories that could still break the game — **negative numbers**, **decimals**, and
+**extremely large values** — plus a few non-numeric guards. All tests pass:
+
 ```
-# Paste your pytest output here, e.g.:
-# pytest tests/
-# ========================= X passed in 0.XXs =========================
+$ python -m pytest -v
+============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.1.1, pluggy-1.6.0
+cachedir: .pytest_cache
+rootdir: ai110-module1show-gameglitchinvestigator-starter
+plugins: anyio-4.13.0
+collecting ... collected 20 items
+
+tests/test_edge_cases.py::test_negative_number_is_parsed PASSED          [  5%]
+tests/test_edge_cases.py::test_negative_guess_hints_higher_without_crashing PASSED [ 10%]
+tests/test_edge_cases.py::test_large_negative_number_is_handled PASSED   [ 15%]
+tests/test_edge_cases.py::test_decimal_is_truncated_to_int PASSED        [ 20%]
+tests/test_edge_cases.py::test_negative_decimal_is_truncated_toward_zero PASSED [ 25%]
+tests/test_edge_cases.py::test_malformed_decimal_fails_gracefully PASSED [ 30%]
+tests/test_edge_cases.py::test_decimal_guess_flows_into_check_guess PASSED [ 35%]
+tests/test_edge_cases.py::test_extremely_large_value_is_parsed PASSED    [ 40%]
+tests/test_edge_cases.py::test_extremely_large_guess_hints_lower_without_crashing PASSED [ 45%]
+tests/test_edge_cases.py::test_large_value_in_scientific_notation_via_decimal_path PASSED [ 50%]
+tests/test_edge_cases.py::test_empty_input_is_rejected PASSED            [ 55%]
+tests/test_edge_cases.py::test_none_input_is_rejected PASSED             [ 60%]
+tests/test_edge_cases.py::test_alphabetic_input_is_rejected PASSED       [ 65%]
+tests/test_game_logic.py::test_winning_guess PASSED                      [ 70%]
+tests/test_game_logic.py::test_too_high_tells_player_to_go_lower PASSED  [ 75%]
+tests/test_game_logic.py::test_too_low_tells_player_to_go_higher PASSED  [ 80%]
+tests/test_game_logic.py::test_hint_direction_with_string_secret_too_high PASSED [ 85%]
+tests/test_game_logic.py::test_hint_direction_with_string_secret_too_low PASSED [ 90%]
+tests/test_game_logic.py::test_attempt_limits_fixed_values PASSED        [ 95%]
+tests/test_game_logic.py::test_attempt_limits_decrease_with_difficulty PASSED [100%]
+
+============================= 20 passed in 0.41s ==============================
 ```
 
 ## 🚀 Stretch Features
 
-- [ ] [If you choose to complete Challenge 4, describe the Enhanced UI changes here — a screenshot is optional]
+- [x] **Enhanced UI: color-coded Hot/Cold feedback + session summary table.**
+  Built on the existing proximity helpers in [`logic_utils.py`](logic_utils.py), this
+  adds structured, user-friendly output without touching the core guess/score logic.
+
+  **What was added**
+
+  - **`proximity_state(ratio)` in [`logic_utils.py`](logic_utils.py)** — a new helper that
+    classifies a closeness ratio into a Hot/Cold band and returns it as data:
+    `{"emoji", "label", "color"}`. The bands run 🎯 *Bullseye* (violet) → 🔥 *Hot* (red)
+    → ♨️ *Warm* (orange) → 💧 *Cool* (blue) → 🧊 *Freezing* (blue). The colour is a
+    Streamlit colour name so `logic_utils` stays UI-framework-free and `app.py` decides
+    how to render it.
+  - **`build_session_summary(guess_log)` in [`logic_utils.py`](logic_utils.py)** — shapes the
+    raw per-guess log into display-ready table rows with columns
+    `#`, `Guess`, `Result` (outcome + emoji), `Closeness` (a percentage), and
+    `State` (Hot/Cold label + emoji). Returns an empty list for an empty log.
+
+  **Where the UI changed in [`app.py`](app.py)**
+
+  - **Color-coded Hot/Cold readout (submit handler).** After each non-winning guess,
+    `app.py` now calls `proximity_state(ratio)` and renders a colored markdown line —
+    e.g. `🔥 :red[Hot] · ███████░░░ 78% close` — combining the emoji, the
+    color-coded label, the existing `proximity_bar`, and a percentage. Feedback turns
+    red as you near the secret and blue when you're far.
+  - **Session Summary table (bottom of page).** A new `📋 Session Summary` section calls
+    `build_session_summary(st.session_state.guess_log)` and renders it with `st.table`,
+    followed by three `st.metric` cards (total **Guesses**, current **Score**, and
+    **Closest** approach). It appears once at least one guess has been made and gives the
+    player a clean end-of-round scorecard.
+
+  Core game logic (`check_guess`, `update_score`, state handling) was left untouched, and
+  all 39 tests still pass.

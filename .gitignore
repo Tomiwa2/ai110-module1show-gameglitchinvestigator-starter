@@ -21,6 +21,9 @@ pip-wheel-metadata/
 # Streamlit
 .streamlit/secrets.toml
 
+# Game runtime state (local high score)
+high_score.json
+
 # Test and coverage artifacts
 .pytest_cache/
 .coverage

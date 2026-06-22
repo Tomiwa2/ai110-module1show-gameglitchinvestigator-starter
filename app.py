@@ -1,9 +1,20 @@
 import random
 import streamlit as st
 
-# FIX: Moved check_guess into logic_utils.py and imported it here, instead of
-# defining it inline — refactor done with Claude Code in agent mode.
-from logic_utils import check_guess
+# FIX: Moved check_guess and parse_guess into logic_utils.py and imported them
+# here, instead of defining them inline — refactor done with Claude Code in
+# agent mode.
+from logic_utils import (
+    check_guess,
+    parse_guess,
+    load_high_score,
+    update_high_score,
+    proximity_ratio,
+    proximity_bar,
+    proximity_label,
+    proximity_state,
+    build_session_summary,
+)
 
 def get_range_for_difficulty(difficulty: str):
     if difficulty == "Easy":
@@ -14,23 +25,6 @@ def get_range_for_difficulty(difficulty: str):
         return 1, 50
     return 1, 100
 
-
-def parse_guess(raw: str):
-    if raw is None:
-        return False, None, "Enter a guess."
-
-    if raw == "":
-        return False, None, "Enter a guess."
-
-    try:
-        if "." in raw:
-            value = int(float(raw))
-        else:
-            value = int(raw)
-    except Exception:
-        return False, None, "That is not a number."
-
-    return True, value, None
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
     if outcome == "Win":
@@ -77,6 +71,21 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
+# --- Stretch feature A: High Score (persisted to disk) ---
+st.sidebar.divider()
+record = load_high_score()
+if record["score"] > 0:
+    detail = ""
+    if record.get("difficulty"):
+        detail = f" · {record['difficulty']}"
+        if record.get("attempts") is not None:
+            detail += f", {record['attempts']} attempt(s)"
+    st.sidebar.metric("🏆 High Score", record["score"], help="Your best score, saved between sessions.")
+    if detail:
+        st.sidebar.caption(f"Set on{detail}")
+else:
+    st.sidebar.metric("🏆 High Score", "—", help="Win a game to set your first high score!")
+
 if "secret" not in st.session_state:
     st.session_state.secret = random.randint(low, high)
 
@@ -91,6 +100,11 @@ if "status" not in st.session_state:
 
 if "history" not in st.session_state:
     st.session_state.history = []
+
+# Structured per-guess log powering the Guess History visualization. Each entry
+# is {"guess", "outcome", "ratio"} for a valid numeric guess.
+if "guess_log" not in st.session_state:
+    st.session_state.guess_log = []
 
 st.subheader("Make a guess")
 
@@ -120,8 +134,15 @@ with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
 if new_game:
+    # Full reset so a finished round (won or lost) can actually replay without
+    # a browser refresh. The high score is intentionally NOT cleared — it lives
+    # on disk and should survive across games.
     st.session_state.attempts = 0
-    st.session_state.secret = random.randint(1, 100)
+    st.session_state.secret = random.randint(low, high)
+    st.session_state.status = "playing"
+    st.session_state.score = 0
+    st.session_state.history = []
+    st.session_state.guess_log = []
     st.success("New game started.")
     st.rerun()
 
@@ -150,8 +171,28 @@ if submit:
 
         outcome, message = check_guess(guess_int, secret)
 
+        # Record this guess for the Guess History visualization. proximity_ratio
+        # always uses the real (int) secret and the current difficulty range.
+        ratio = proximity_ratio(guess_int, st.session_state.secret, low, high)
+        st.session_state.guess_log.append({
+            "guess": guess_int,
+            "outcome": outcome,
+            "ratio": ratio,
+        })
+
         if show_hint:
             st.warning(message)
+
+        # UI enhancement: color-coded Hot/Cold readout for the latest guess.
+        # proximity_state maps closeness to an emoji + Streamlit colour so the
+        # feedback turns red when you're hot and blue when you're cold.
+        if outcome != "Win":
+            state = proximity_state(ratio)
+            st.markdown(
+                f"### {state['emoji']} "
+                f":{state['color']}[{state['label']}] "
+                f"· `{proximity_bar(ratio)}` {round(ratio * 100)}% close"
+            )
 
         st.session_state.score = update_score(
             current_score=st.session_state.score,
@@ -166,6 +207,17 @@ if submit:
                 f"You won! The secret was {st.session_state.secret}. "
                 f"Final score: {st.session_state.score}"
             )
+
+            # Stretch feature A: persist the score if it's a new personal best.
+            is_record, record = update_high_score(
+                score=st.session_state.score,
+                difficulty=difficulty,
+                attempts=st.session_state.attempts,
+            )
+            if is_record:
+                st.success(f"🏆 NEW HIGH SCORE: {record['score']}!")
+            else:
+                st.info(f"🏆 High score to beat: {record['score']}")
         else:
             if st.session_state.attempts >= attempt_limit:
                 st.session_state.status = "lost"
@@ -174,6 +226,43 @@ if submit:
                     f"The secret was {st.session_state.secret}. "
                     f"Score: {st.session_state.score}"
                 )
+
+# --- Stretch feature B: Guess History visualization (sidebar) ---
+# Placed at the bottom so it renders AFTER the submit handler has appended the
+# latest guess — Streamlit sidebar calls land in the sidebar regardless of where
+# they appear in the script.
+st.sidebar.divider()
+st.sidebar.header("Guess History")
+if not st.session_state.guess_log:
+    st.sidebar.caption("No guesses yet. Each guess shows how close you got.")
+else:
+    icon = {"Win": "🎉", "Too High": "📉", "Too Low": "📈"}
+    # Most recent guess first.
+    for i, entry in enumerate(reversed(st.session_state.guess_log), start=1):
+        bar = proximity_bar(entry["ratio"])
+        label = proximity_label(entry["ratio"])
+        mark = icon.get(entry["outcome"], "•")
+        st.sidebar.markdown(
+            f"`{bar}` {mark} **{entry['guess']}** — {label}"
+        )
+
+# --- UI enhancement: Session Summary table ---
+# A structured recap of the whole session rendered from build_session_summary.
+# Shown once at least one guess exists, and always once the round ends so the
+# player gets a clean scorecard of their run.
+if st.session_state.guess_log:
+    st.divider()
+    st.subheader("📋 Session Summary")
+    summary_rows = build_session_summary(st.session_state.guess_log)
+    st.table(summary_rows)
+
+    total = len(summary_rows)
+    best_ratio = max(e["ratio"] for e in st.session_state.guess_log)
+    best = proximity_state(best_ratio)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Guesses", total)
+    c2.metric("Score", st.session_state.score)
+    c3.metric("Closest", f"{best['emoji']} {round(best_ratio * 100)}%")
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
