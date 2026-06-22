@@ -1,6 +1,7 @@
 import random
 import streamlit as st
 
+#Done
 # FIX: Moved check_guess and parse_guess into logic_utils.py and imported them
 # here, instead of defining them inline — refactor done with Claude Code in
 # agent mode.
