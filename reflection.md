@@ -51,13 +51,15 @@ Document at least 3 bugs you found. Add rows as needed.
 |Enter "150" (or no         | Game should reject | Nothing               | none                   |
  outside 1-100) and click     input and show 
  Submit                       "out of bounds" error            
-
+|Range in setting !=        | They should match | They so not            | none
+  range on page for each
+  difficulty
 ---
 
 ## 2. How did you use AI as a teammate?
 
 - Which AI tools did you use on this project (for example: ChatGPT, Gemini, Copilot)?
-Ans: Claude
+Ans: Claude and Gemini
 
 - Give one example of an AI suggestion that was correct (including what the AI suggested and how you verified the result).
 Ans: for the backwards hint, AI suggested that the correct fix should be
@@ -80,9 +82,14 @@ While this would technically make the screen show the number 8, I verified throu
 ## 3. Debugging and testing your fixes
 
 - How did you decide whether a bug was really fixed?
+   Ans: I decided a bug was really fixed only when I could confirm it two ways: by reproducing the original broken behavior, then watching that exact scenario behave correctly after the change. For the reversed hint bug, that meant deliberately guessing both above and below the secret number and checking the hint pointed the right way each time. I didn't trust a fix just because the screen "looked right" once: I wanted a repeatable test that would catch the bug again if it ever came back. A fix that only changed the displayed result without addressing the underlying logic (like setting attempts to 9 to mask a subtraction bug) didn't count as fixed to me.
+
 - Describe at least one test you ran (manual or using pytest)  
   and what it showed you about your code.
+   Ans: I wrote pytest tests in tests/test_game_logic.py and ran them with python -m pytest, ending with 7 passing tests. The most useful one was test_too_high_tells_player_to_go_lower, which calls check_guess(60, 50) and asserts the outcome is "Too High" AND that the message contains "LOWER" but not "HIGHER". This showed me my hint fix worked for the normal case, and it also exposed something I hadn't noticed: the app sometimes passes the secret number as a string, so I added test_hint_direction_with_string_secret_too_high to confirm the fix held in that fallback branch too. I also had to repair the pre-existing tests, which were broken because they compared the (outcome, message) tuple against a plain string instead of unpacking it.
+
 - Did AI help you design or understand any tests? How?
+   Ans: Yes — I used Claude Code in agent mode to help author the regression tests and to repair the broken pre-existing ones. The most helpful part was AI pointing out edge cases I would have missed on my own, like the fact that check_guess can receive the secret as a string and hit a TypeError fallback path, which needed its own test. AI also helped me understand why the old tests were failing; that asserting a string against a returned tuple will never match rather than just handing me a fix. I still verified each test by running pytest myself and tracing the logic, so I understood what each assertion was actually proving.
 
 ---
 

@@ -1,3 +1,7 @@
+# FIX: Authored these regression tests for the hint-direction and
+# attempt-limit bugs, and repaired the pre-existing tests (which compared the
+# (outcome, message) tuple against a bare string) — done with Claude Code in
+# agent mode.
 from logic_utils import check_guess
 
 

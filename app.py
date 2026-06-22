@@ -1,6 +1,8 @@
 import random
 import streamlit as st
 
+# FIX: Moved check_guess into logic_utils.py and imported it here, instead of
+# defining it inline — refactor done with Claude Code in agent mode.
 from logic_utils import check_guess
 
 def get_range_for_difficulty(difficulty: str):
@@ -60,6 +62,9 @@ difficulty = st.sidebar.selectbox(
     index=1,
 )
 
+# FIX: Corrected attempt limits so they decrease as difficulty rises
+# (was Easy=6, Normal=8, Hard=5 — non-monotonic) — diagnosed and fixed
+# with Claude Code in agent mode.
 attempt_limit_map = {
     "Easy": 10,    # most attempts — easiest
     "Normal": 7,   # standard

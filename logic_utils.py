@@ -18,6 +18,9 @@ def check_guess(guess, secret):
 
     outcome examples: "Win", "Too High", "Too Low"
     """
+    # FIX: Refactored check_guess out of app.py into logic_utils.py and fixed
+    # the reversed hint bug (Too High now says "Go LOWER", Too Low says
+    # "Go HIGHER") — done with Claude Code in agent mode.
     if guess == secret:
         return "Win", "🎉 Correct!"
 
